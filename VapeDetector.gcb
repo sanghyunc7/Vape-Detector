@@ -1,0 +1,121 @@
+
+
+;Humidity/Temperature Sensor demo using DHT.H include file.
+;Thomas Henry
+;This revision: 4/22/2014
+
+#include <DHT.H>                    ;DHT sensor include file
+
+;----- Settings
+
+#chip 16F887, 8                      ;PIC16F887 running at 8 MHz
+#config mclr=off                    ;reset handled internally
+#config osc=int                     ;use internal clock
+
+;----- Constants
+
+#define DHT_type    11              ;define sensor type
+#define DHT_pin     PortA.1         ;sensor on pin 17
+
+#define LCD_IO 4                    ;4-bit mode
+ #define LCD_NO_RW 1'Make sure RW is grounded, in write mode by default
+ #define LCD_RS PORTC.5
+ #define LCD_Enable PORTC.7
+ #define LCD_DB4 PORTD.4
+ #define LCD_DB5 PORTD.5
+ #define LCD_DB6 PORTD.6
+ #define LCD_DB7 PORTD.7
+#define degree      223             ;ASCII code for degree mark
+#define period      2 S             ;update period
+
+;----- Variables
+
+dim msg, whole, tenths as Word
+dim rh, cels, fahr as Integer
+
+#define pir porta.2 'line detection
+dir pir in
+
+dim avgOne, avgTwo, avgDiff, sum as Integer
+
+avgOne = 0
+avgTwo = 0
+avgDiff = 0
+
+
+
+;----- Main Program
+
+dir porta in
+dir portB out                ;Port B is all output
+dir portC out
+
+cls
+print "Initializing..."
+wait period                         ;let unit stabilize
+
+
+
+
+do
+
+
+
+  readDHT(rh, cels, fahr, msg)      ;get current values
+      select case msg
+      case 0:
+      cls                ;all okay, so proceed
+        locate 0,0
+        print "Humidity: "            ;print relative humidity
+        print rh
+        print "%"
+'        locate 1,0                    ;print temperature in Celsius
+'        print "C:"
+'        print cels
+'        LCDWriteChar degree           ;print degree mark
+'        print " "
+'        print "F:"                    ;print temperature in Fahrenheit
+'        print fahr
+'        LCDWriteChar degree           ;print degree mark
+
+        gosub humidFluctuations
+
+
+
+
+      case 1:                         ;unit not responding
+        print "No response..."
+      case 2:                         ;checksum error
+        print "Bad checksum..."
+    end select
+
+
+  wait period                       ;2 seconds min between readings
+
+
+
+
+  if pir = 1 & avgDiff > 2 then gosub sendAlert
+  if avgDiff < 2 then gosub turnOffAlert
+
+
+
+loop                                ;repeat in perpetuity
+
+
+humidFluctuations:
+  avgOne = AvgTwo
+  avgTwo = rh
+  avgDiff = avgTwo - avgOne
+
+Return
+
+sendAlert:
+  portb.1 = 1
+  portc.0 = 1
+Return
+
+turnOffAlert:
+portb.1 = 0
+portc.0 = 0
+Return
